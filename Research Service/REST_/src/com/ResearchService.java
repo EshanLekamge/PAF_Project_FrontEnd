@@ -1,264 +1,436 @@
 package com;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.MediaType;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 
-import model.ResearchServiceModel;
-import com.google.gson.JsonElement;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
-@Path("/")
 public class ResearchService {
-
-	ResearchServiceModel researchServiceModel = new ResearchServiceModel();
-	RequestValidator requestValidator = new RequestValidator();
-
-	@POST
-	@Path("/test")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-
-	public String test(String data) {
-		JsonObject itemObject = new JsonParser().parse(data).getAsJsonObject();
-		return itemObject.toString();
-	}
-
-	@POST
-	@Path("/insertresearchProject")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public String addResearchProject(String researchData) {
-		JsonObject result = new JsonObject();
-		result.addProperty("status", "error");
-		int researchID = 0;
-		String researchName = "";
-		int researcherId = 0;
-		String researcherName = "";
-		String researchCategory = "";
-		String researchDescription = "";
-		float researchCost = 0;
-		int researchDuration = 0;
-		String startDate = "";
-
+	
+	private Connection connect(){
+		
+		Connection con = null;
+		
 		try {
-
-			JsonObject research = new JsonParser().parse(researchData).getAsJsonObject();
-
-			// request validation
-			if (!requestValidator.validate(research.get("key").getAsString())) {
-
-				return result.toString();
-			}
-
-			researcherId = research.get("user_id").getAsInt();
-
-			if (research.has("researches")) {
-
-				for (JsonElement singleItem : research.get("researches").getAsJsonArray()) {
-					JsonObject researchObject = singleItem.getAsJsonObject();
-
-					researchID = researchObject.get("researchID").getAsInt();
-					researchName = researchObject.get("researchName").getAsString();
-					// researcherId = researchObject.get("researcherId").getAsInt();
-					researcherName = researchObject.get("researcherName").getAsString();
-					researchCategory = researchObject.get("researchCategory").getAsString();
-					researchDescription = researchObject.get("researchDescription").getAsString();
-					researchCost = researchObject.get("researchCost").getAsFloat();
-					researchDuration = researchObject.get("researchDuration").getAsInt();
-					startDate = researchObject.get("startDate").getAsString();
-
-					researchServiceModel.insertResearchProject(researchID, researchName, researcherId, researcherName,
-							researchCategory, researchDescription, researchCost, researchDuration, startDate);
-
-				}
-
-				result.addProperty("status", "done all");
-
-			} else if (research.has("researchID")) {
-				researchID = research.get("researchID").getAsInt();
-				researchName = research.get("researchName").getAsString();
-				// researcherId = research.get("researcherId").getAsInt();
-				researcherName = research.get("researcherName").getAsString();
-				researchCategory = research.get("researchCategory").getAsString();
-				researchDescription = research.get("researchDescription").getAsString();
-				researchCost = research.get("researchCost").getAsFloat();
-				researchDuration = research.get("researchDuration").getAsInt();
-				startDate = research.get("startDate").getAsString();
-
-				if (researchServiceModel.insertResearchProject(researchID, researchName, researcherId, researcherName,
-						researchCategory, researchDescription, researchCost, researchDuration, startDate)) {
-					result.addProperty("status", "done");
-				}
-
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
-			result.addProperty("status", "error");
+			
+			Class.forName("com.mysql.jdbc.Driver");
+			con = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/research_db", "paf_user", "^paf_user_pw_000");
+			
+		}catch(Exception e)
+		{
+			System.out.print(e);
 		}
-
-		return result.toString();
+		
+		return con;
+		
 	}
 
-	@GET
-	@Path("/getResearchProjects")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public String getAllresearchProjects(@DefaultValue("") @QueryParam("key") String key)// (String researchData)
+
+public String insertResearchProject(int researchID, String researchName, int researcherId, String researcherName, String researchCategory, String researchDescription, float researchCost, int researchDuration, String startDate)
+{
+	String output = "";
+	
+	try {
+		
+		Connection con = connect();
+		if(con == null)
+		{
+			return "error";
+		}
+		
+		String insertSql = "INSERT INTO researchprojects_tb VALUES (?,?,?,?,?,?,?,?,?)";
+		PreparedStatement statement = con.prepareStatement(insertSql);
+		
+		statement.setInt(1, researchID);
+		statement.setString(2, researchName);
+		statement.setInt(3, researcherId);
+		statement.setString(4, researcherName);
+		statement.setString(5, researchCategory);
+		statement.setString(6, researchDescription);
+		statement.setFloat(7, researchCost);
+		statement.setInt(8, researchDuration);
+		statement.setString(9, startDate);
+		
+		statement.execute();
+		con.close();
+		
+		String newResearches = getAllResearchProjects();
+		output = "{\"status\":\"success\", \"data\": \""+newResearches+"\"}";
+		
+	}
+	catch(Exception e)
 	{
-		// JsonObject itemObject = new
-		// JsonParser().parse(researchData).getAsJsonObject();
-		// String key = itemObject.get("key").getAsString();
-
-		// request validation
-		if (!requestValidator.validate(key)) {
-			JsonObject result = new JsonObject();
-			result.addProperty("status", "error_unauthorized");
-			return result.toString();
-		}
-
-		return researchServiceModel.getAllResearchProjects();
+		output = "{\"status\":\"error\", \"data\": \"Error while inserting Research Details.\"}"; 
+		System.err.println(e.getMessage()); 
+		
 	}
+	
+	return output;
+	
+}
 
-	@GET
-	@Path("/getResearchProject")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public String getresearchProjects(@DefaultValue("0") @QueryParam("researchID") Integer research,
-			@DefaultValue("") @QueryParam("key") String key)// (String researchData)
+public String getAllResearchProjects()
+{ 
+	String output = "";
+	
+	try
+	{ 
+		Connection con = connect(); 
+		
+		if (con == null) 
+		{ 
+			return "Error while connecting to the database for reading."; 
+		
+		} 
+		
+		// Prepare the html table to be displayed
+		output = "<table border=\"1\"><tr><th>Research ID</th><th>Research Name</th><th>Researcher Id</th><th>Researcher Name</th><th>Research Category</th><th>Research Description</th><th>Research Cost</th><th>Research Duration</th><th>Start Date</th><th>Update</th><th>Delete</th></tr>"; 
+ 
+		String readSql = "SELECT * FROM researchprojects_tb";
+		Statement statement = con.createStatement();
+		ResultSet results = statement.executeQuery(readSql);
+		
+		// iterate through the rows in the result set
+		while (results.next()) 
+		{
+			String researchID = Integer.toString(results.getInt("researchID")); 
+			String researchName = results.getString("researchName"); 
+			String researcherId = Integer.toString(results.getInt("researcherId")); 
+			String researcherName = results.getString("researcherName"); 
+			String researchCategory = results.getString("researchCategory");
+			String researchDescription = results.getString("researchDescription");
+			String researchCost = Float.toString(results.getFloat("researchCost"));
+			String researchDuration = results.getString("researchDuration");
+			String startDate = results.getString("startDate");
+			
+			// Add into the html table
+			 output += "<tr><td>" + researchID  + "</td>"; 
+			 output += "<td>" + researchName + "</td>"; 
+			 output += "<td>" + researcherId + "</td>"; 
+			 output += "<td>" + researcherName + "</td>"; 
+			 output += "<td>" + researchCategory + "</td>";
+			 output += "<td>" + researchDescription + "</td>"; 
+			 output += "<td>" + researchCost + "</td>"; 
+			 output += "<td>" + researchDuration + "</td>"; 
+			 output += "<td>" + startDate + "</td>"; 
+			
+			// buttons
+			 output += "<td><input name='btnUpdate' type='button' value='Update' "
+					 + "class='btnUpdate btn btn-secondary' data-researchid='" + researchID + "'></td>"
+					 + "<td><input name='btnRemove' type='button' value='Remove' "
+					 + "class='btnRemove btn btn-danger' data-researchid='" + researchID + "'></td></tr>";
+		} 
+		
+		con.close(); 
+		// Complete the html table
+		output += "</table>"; 
+		
+	}
+	catch (Exception e) 
 	{
-		// JsonObject itemObject = new
-		// JsonParser().parse(researchData).getAsJsonObject();
-		// String key = itemObject.get("key").getAsString();
+		output = "Error while reading the items."; 
+		System.err.println(e.getMessage()); 
+	} 
+	
+	return output;
+	
+}
 
-		// JsonObject researhObject = new
-		// JsonParser().parse(researchData).getAsJsonObject();
-		// int researchID = researhObject.get("researchID").getAsInt();
-
-		// request validation
-		if (!requestValidator.validate(key)) {
-			JsonObject result = new JsonObject();
-			result.addProperty("status", "error_unauthorized");
-			return result.toString();
+public String getResearchProject(int researchID)
+{
+	String output = "";
+	
+	try {
+		
+		Connection con = connect();
+		if(con == null)
+		{
+			return "Error while connecting to the database for reading."; 
 		}
+		
+		// Prepare the html table to be displayed
+		
+		output = "<table border=\"1\"><tr><th>Research ID</th><th>Research Name</th><th>Researcher Id</th><th>Researcher Name</th><th>Research Category</th><th>Research Description</th><th>Research Cost</th><th>Research Duration</th><th>Start Date</th><th>Update</th><th>Delete</th></tr>"; 
+		
+		String readSql = "SELECT * FROM researchprojects_tb WHERE researchID = ? ";
+		PreparedStatement statement = con.prepareStatement(readSql);
+		
+		statement.setInt(1, researchID);
+		ResultSet results = statement.executeQuery();
+		
+		if(results.next())
+		{
+			researchID = results.getInt("researchID"); 
+			String researchName = results.getString("researchName"); 
+			String researcherId = Integer.toString(results.getInt("researcherId")); 
+			String researcherName = results.getString("researcherName"); 
+			String researchCategory = results.getString("researchCategory");
+			String researchDescription = results.getString("researchDescription");
+			String researchCost = Float.toString(results.getFloat("researchCost"));
+			String researchDuration = results.getString("researchDuration");
+			String startDate = results.getString("startDate");
 
-		return researchServiceModel.getResearchProject(research);
-	}
-
-	@GET
-	@Path("/searchResearchProjects")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public String searchResearch(@DefaultValue("") @QueryParam("researchName") String research,
-			@DefaultValue("") @QueryParam("key") String key)// (String researchData)
+			// Add into the html table
+			
+			 output += "<tr>" + researchID  + "</td>"; 
+			 output += "<td>" + researchName + "</td>"; 
+			 output += "<td>" + researcherId + "</td>"; 
+			 output += "<td>" + researcherName + "</td>"; 
+			 output += "<td>" + researchCategory + "</td>";
+			 output += "<td>" + researchDescription + "</td>"; 
+			 output += "<td>" + researchCost + "</td>"; 
+			 output += "<td>" + researchDuration + "</td>"; 
+			 output += "<td>" + startDate + "</td>"; 
+			
+			// buttons
+			output += "<td><input name='btnUpdate' "
+					+ "type='button' value='Update' "
+					+ " class=' btnUpdate btn btn-secondary' data-researchid = '" + researchID +"'></td>"
+					+ "<td><form method='post' action='index.jsp'>"
+					+ "<input name='btnRemove' type='button' "
+					+ "value='Remove' class='btn btn-danger' data-researchid = '" + researchID +"'></td></tr>"; 
+		}
+		
+		con.close();
+		// Complete the html table
+		output += "</table>"; 
+		
+	}catch(Exception e)
 	{
-		// JsonObject itemObject = new
-		// JsonParser().parse(researchData).getAsJsonObject();
-		// String key = itemObject.get("key").getAsString();
-
-		// JsonObject researhObject = new
-		// JsonParser().parse(researchData).getAsJsonObject();
-		// String researchName = researhObject.get("researchName").getAsString();
-
-		// request validation
-		if (!requestValidator.validate(key)) {
-			JsonObject result = new JsonObject();
-			result.addProperty("status", "error_unauthorized");
-			return result.toString();
-		}
-
-		return researchServiceModel.searchResearchProjects(research);
+		output = "Error while reading the items."; 
+		System.err.println(e.getMessage()); 
+		
 	}
+	
+	return output;
+}
 
-	@GET
-	@Path("/searchResearchProjectsCat")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public String searchResearchByCategory(@DefaultValue("") @QueryParam("researchCategory") String research,
-			@DefaultValue("") @QueryParam("key") String key)// (String researchData)
+
+public String searchResearchProjects(String researchName)
+{
+	
+	String output = "";
+	
+	try {
+		
+		Connection con = connect();
+		if(con == null)
+		{
+			return "Error while connecting to the database for reading."; 
+		}
+		
+		// Prepare the html table to be displayed
+		
+		output = "<table border=\"1\"><tr><th>Research ID</th><th>Research Name</th><th>Researcher Id</th><th>Researcher Name</th><th>Research Category</th><th>Research Description</th><th>Research Cost</th><th>Research Duration</th><th>Start Date</th><th>Update</th><th>Delete</th></tr>"; 
+		
+		String readSql = "SELECT * FROM researchprojects_tb WHERE researchName LIKE CONCAT( '%',?,'%')";
+		PreparedStatement statement = con.prepareStatement(readSql);
+		
+		statement.setString(1, researchName);
+		
+		ResultSet results = statement.executeQuery();
+		
+		JsonArray researchArray = new JsonArray();
+		
+		
+		while(results.next())
+		{
+			String researchID = Integer.toString(results.getInt("researchID")); 
+			researchName = results.getString("researchName"); 
+			String researcherId = Integer.toString(results.getInt("researcherId")); 
+			String researcherName = results.getString("researcherName"); 
+			String researchCategory = results.getString("researchCategory");
+			String researchDescription = results.getString("researchDescription");
+			String researchCost = Float.toString(results.getFloat("researchCost"));
+			String researchDuration = results.getString("researchDuration");
+			String startDate = results.getString("startDate");
+
+			// Add into the html table
+			
+			 output += "<tr>" + researchID  + "</td>"; 
+			 output += "<td>" + researchName + "</td>"; 
+			 output += "<td>" + researcherId + "</td>"; 
+			 output += "<td>" + researcherName + "</td>"; 
+			 output += "<td>" + researchCategory + "</td>";
+			 output += "<td>" + researchDescription + "</td>"; 
+			 output += "<td>" + researchCost + "</td>"; 
+			 output += "<td>" + researchDuration + "</td>"; 
+			 output += "<td>" + startDate + "</td>"; 
+			
+			// buttons
+			 output += "<td><input name='btnUpdate' "
+						+ "type='button' value='Update' "
+						+ " class=' btnUpdate btn btn-secondary' data-researchid = '" + researchID +"'></td>"
+						+ "<td><form method='post' action='index.jsp'>"
+						+ "<input name='btnRemove' type='button' "
+						+ "value='Remove' class='btn btn-danger' data-researchid = '" + researchID +"'></td></tr>"; 
+		}
+		
+		con.close();
+		
+	}catch(Exception e)
 	{
-		// JsonObject itemObject = new
-		// JsonParser().parse(researchData).getAsJsonObject();
-		// String key = itemObject.get("key").getAsString();
-
-		// JsonObject researhObject = new
-		// JsonParser().parse(researchData).getAsJsonObject();
-		// String researchCategory =
-		// researhObject.get("researchCategory").getAsString();
-
-		// request validation
-		if (!requestValidator.validate(key)) {
-			JsonObject result = new JsonObject();
-			result.addProperty("status", "error_unauthorized");
-			return result.toString();
-		}
-
-		return researchServiceModel.searchResearchProjectsByCategory(research);
+		output = "Error while reading the items."; 
+		System.err.println(e.getMessage()); 
+		
 	}
+	
+	return output;
+}
 
-	@PUT
-	@Path("/updateresearchProject")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public String updateResearch(String researchData) {
-		JsonObject result = new JsonObject();
-		result.addProperty("status", "error");
 
-		JsonObject research = new JsonParser().parse(researchData).getAsJsonObject();
-
-		// request validation
-		if (!requestValidator.validate(research.get("key").getAsString())) {
-
-			return result.toString();
+public String searchResearchProjectsByCategory(String researchCategory)
+{
+	JsonObject researchDetails = new JsonObject();
+	
+	String output = "error";
+	
+	try {
+		
+		Connection con = connect();
+		if(con == null)
+		{
+			return researchDetails.toString();
 		}
+		
+		// Prepare the html table to be displayed
+		
+		output = "<table border=\"1\"><tr><th>Research ID</th><th>Research Name</th><th>Researcher Id</th><th>Researcher Name</th><th>Research Category</th><th>Research Description</th><th>Research Cost</th><th>Research Duration</th><th>Start Date</th><th>Update</th><th>Delete</th></tr>"; 
+		
+		String readSql = "SELECT * FROM researchprojects_tb WHERE researchCategory = ?";
+		PreparedStatement statement = con.prepareStatement(readSql);
+		
+		statement.setString(1, researchCategory);
+		
+		ResultSet results = statement.executeQuery();
+		
+		JsonArray researchArray = new JsonArray();
+		
+		
+		while(results.next())
+		{
+			String researchID = Integer.toString(results.getInt("researchID")); 
+			String researchName = results.getString("researchName"); 
+			String researcherId = Integer.toString(results.getInt("researcherId")); 
+			String researcherName = results.getString("researcherName"); 
+			researchCategory = results.getString("researchCategory");
+			String researchDescription = results.getString("researchDescription");
+			String researchCost = Float.toString(results.getFloat("researchCost"));
+			String researchDuration = results.getString("researchDuration");
+			String startDate = results.getString("startDate");
 
-		JsonObject researhObject = new JsonParser().parse(researchData).getAsJsonObject();
+			// Add into the html table
+			
+			 output += "<tr>" + researchID  + "</td>"; 
+			 output += "<td>" + researchName + "</td>"; 
+			 output += "<td>" + researcherId + "</td>"; 
+			 output += "<td>" + researcherName + "</td>"; 
+			 output += "<td>" + researchCategory + "</td>";
+			 output += "<td>" + researchDescription + "</td>"; 
+			 output += "<td>" + researchCost + "</td>"; 
+			 output += "<td>" + researchDuration + "</td>"; 
+			 output += "<td>" + startDate + "</td>"; 
+			
+			// buttons
+			 output += "<td><input name='btnUpdate' "
+						+ "type='button' value='Update' "
+						+ " class=' btnUpdate btn btn-secondary' data-researchid = '" + researchID +"'></td>"
+						+ "<td><form method='post' action='index.jsp'>"
+						+ "<input name='btnRemove' type='button' "
+						+ "value='Remove' class='btn btn-danger' data-researchid = '" + researchID +"'></td></tr>"; 
 
-		int researchID = researhObject.get("researchID").getAsInt();
-		String researchName = researhObject.get("researchName").getAsString();
-		int researcherId = researhObject.get("researcherId").getAsInt();
-		String researcherName = researhObject.get("researcherName").getAsString();
-		String researchCategory = researhObject.get("researchCategory").getAsString();
-		String researchDescription = researhObject.get("researchDescription").getAsString();
-		float researchCost = researhObject.get("researchCost").getAsFloat();
-		int researchDuration = researhObject.get("researchDuration").getAsInt();
-		String startDate = researhObject.get("startDate").getAsString();
-
-		return researchServiceModel.updateResearchProject(researchID, researchName, researcherId, researcherName,
-				researchCategory, researchDescription, researchCost, researchDuration, startDate);
-
-	}
-
-	@DELETE
-	@Path("/deleteresearchProject")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public String deleteResearch(String researchData) {
-		String returnValue = "failed";
-
-		JsonObject researhObject = new JsonParser().parse(researchData).getAsJsonObject();
-		String key = researhObject.get("key").getAsString();
-
-		// request validation
-		if (!requestValidator.validate(key)) {
-			JsonObject result = new JsonObject();
-			result.addProperty("status", "error_unauthorized");
-			return result.toString();
 		}
-
-		int researchID = researhObject.get("researchID").getAsInt();
-
-		return researchServiceModel.deleteResearchProject(researchID);
-
+		
+		con.close();
+		
+	}catch(Exception e)
+	{
+		output = "Error while reading the items."; 
+		System.err.println(e.getMessage()); 
+		
 	}
+	
+	return output;
+}
+
+
+public String updateResearchProject(int researchID, String researchName, int researcherId, String researcherName, String researchCategory, String researchDescription, float researchCost, int researchDuration, String startDate)
+{
+	String output = "";
+	
+	
+	try {
+		
+		Connection con = connect();
+		if(con == null)
+		{
+			return "Error while connecting to the database for updating";
+		}
+		
+		String insertSql = "UPDATE researchprojects_tb SET researchName = ?, researcherId = ?, researcherName = ?, researchCategory = ?, researchDescription = ?, researchCost = ?, researchDuration = ?, startDate = ? WHERE researchID = ?";
+		
+		PreparedStatement statement = con.prepareStatement(insertSql);
+		
+		statement.setString(1, researchName);
+		statement.setInt(2, researcherId);
+		statement.setString(3, researcherName);
+		statement.setString(4, researchCategory);
+		statement.setString(5, researchDescription);
+		statement.setFloat(6, researchCost);
+		statement.setInt(7, researchDuration);
+		statement.setString(8, startDate);
+		statement.setInt(9, researchID);
+		
+		statement.execute();
+		con.close();
+		
+		output = "Updated Successfully";
+		
+	}catch(Exception e)
+	{
+		output = "Error while Updateding.";
+		System.out.print(e);
+	}
+	return output;
+	
+}
+
+public String deleteResearchProject(int researchID)
+{
+	String output = "";
+	
+	try 
+	{
+		Connection con = connect();
+		
+		if(con == null)
+		{
+			return "Error while connecting to the database for deleting";
+		}
+			String deleteSql = "DELETE FROM researchprojects_tb WHERE researchID = ? ";
+			
+			PreparedStatement statement = con.prepareStatement(deleteSql);
+			statement.setInt(1, researchID);
+			statement.executeUpdate();
+			con.close();
+			
+			output = "Deleted Successfully";
+			
+	}
+	catch(Exception e)
+	{
+		output = "Error while Deleting";
+		System.out.println(e);
+		
+	}
+	
+	return output;
+	
+}
+
 
 }
