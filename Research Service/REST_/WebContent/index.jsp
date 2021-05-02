@@ -43,7 +43,7 @@ Start Date:<input id="startDate" name="startDate" type="text"class="form-control
 <div id="divResearchesGrid">
  <%
  ResearchService researchObj = new ResearchService();
- out.print(researchObj.getAllResearchProjects()); 
+ out.print(researchObj.getAllResearchProjects());
  %>
 </div>
 

@@ -97,7 +97,7 @@ public class ResearchServlet extends HttpServlet {
 			paras.get("researchDescription").toString(), 
 			Float.parseFloat(paras.get("researchCost").toString()), 
 			Integer.parseInt(paras.get("researchDuration").toString()), 
-			paras.get("startDate").toString()); 
+			paras.get("startDate").toString());
 			
 			response.getWriter().write(output); 
 		}
@@ -106,8 +106,14 @@ public class ResearchServlet extends HttpServlet {
 	/**
 	 * @see HttpServlet#doDelete(HttpServletRequest, HttpServletResponse)
 	 */
-	protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
+	protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException 
+	{
+		Map paras = getParasMap(request);
+		
+		String output = researchObj.deleteResearchProject(Integer.parseInt(paras.get("researchID").toString()));
+		
+		response.getWriter().write(output);
+		
 	}
 
 }
