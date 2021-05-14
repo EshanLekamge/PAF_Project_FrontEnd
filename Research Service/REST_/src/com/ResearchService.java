@@ -213,7 +213,7 @@ public String getResearchProject(int researchID)
 
 public String searchResearchProjects(String researchName)
 {
-	
+	String SearchOutput = "";
 	String output = "";
 	
 	try {
@@ -272,15 +272,18 @@ public String searchResearchProjects(String researchName)
 		}
 		
 		con.close();
+		output += "</table>"; 
+		
+		SearchOutput = "{\"status\":\"found\", \"data\": \""+output+"\"}";
 		
 	}catch(Exception e)
 	{
-		output = "Error while reading the items."; 
-		System.err.println(e.getMessage()); 
+		SearchOutput = "{\"status\":\"error\", \"data\": \"Error while Searching Research Details.\"}"; 
+		System.err.println(e.getMessage());
 		
 	}
 	
-	return output;
+	return SearchOutput;
 }
 
 

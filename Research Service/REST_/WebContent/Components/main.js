@@ -6,14 +6,14 @@ $(document).on("click", "#btnSave", function(event)
 	$("#alertError").text(""); 
 	$("#alertError").hide(); 
 
-	// Form validation-------------------
-	//var status = validateItemForm(); 
-	//if (status != true) 
- 	//{ 
- 		//$("#alertError").text(status); 
- 		//$("#alertError").show(); 
- 		//return; 
- 	//} 
+	//Form validation-------------------
+	var status = validateItemForm(); 
+	if (status != true) 
+ 	{ 
+ 		$("#alertError").text(status); 
+ 		$("#alertError").show(); 
+ 		return; 
+ 	}
 
 	// If valid------------------------
 	
@@ -30,6 +30,45 @@ $(document).on("click", "#btnSave", function(event)
  		} 
  	}); 
 });
+
+function validateItemForm()
+{
+	//Research Name
+	if ($("#researchName").val().trim() == "") 
+	{ 
+		return "Insert Research Name."; 
+	}
+	//Researcher Name
+	if ($("#researcherName").val().trim() == "")  
+	{ 
+		return "Enter Researcher Name."; 
+	} 
+	//Research Category
+	if ($("#researchCategory").val().trim() == "") 
+	{ 
+		return "Enter Researcher Name."; 
+	}
+	//Research Description
+	if ($("#researchDescription").val().trim() == "") 
+	{
+		return "Enter Research Description."; 
+	}
+	//Research Cost
+	if ($("#researchCost").val().trim() == "") 
+	{
+		return "Enter Research Description."; 
+	}
+	if ($("#researchDuration").val().trim() == "") 
+	{
+		return "Enter Research Duration."; 
+	}
+	if ($("#startDate").val().trim() == "")
+	{
+		return "Enter Start Date."; 
+	}
+	
+	return true; 
+}
 
 $(document).on("click", ".btnUpdate", function(event)
 { 
