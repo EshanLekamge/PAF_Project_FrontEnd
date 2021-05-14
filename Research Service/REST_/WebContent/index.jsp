@@ -27,7 +27,7 @@ Research Cost:<input id="researchCost" name="researchCost" type="text"class="for
 <br>
 Research Duration:<input id="researchDuration" name="researchDuration" type="text"class="form-control form-control-sm">
 <br>
-Start Date:<input id="startDate" name="startDate" type="text"class="form-control form-control-sm">
+Start Date:<input id="startDate" name="startDate" type="date"class="form-control form-control-sm">
 <br>
 <input id="btnSave" name="btnSave" type="button" value="Save" class="btn btn-primary">
 <input type="hidden" id="hidResearchIDSave" name="hidResearchIDSave" value="">

@@ -54,17 +54,29 @@ function validateItemForm()
 		return "Enter Research Description."; 
 	}
 	//Research Cost
+	var researchCost = $("#researchCost").val();
 	if ($("#researchCost").val().trim() == "") 
 	{
 		return "Enter Research Description."; 
 	}
+	if ((!$.isNumeric(researchCost))) 
+	{
+		return "Enter a Numberical Value."; 
+	}
+	//Research Duration
+	var researchDuration = $("#researchDuration").val();
 	if ($("#researchDuration").val().trim() == "") 
 	{
 		return "Enter Research Duration."; 
 	}
+	if ((!$.isNumeric(researchDuration))) 
+	{
+		return "Enter a Numberical Value."; 
+	}
+	//Research Start Date
 	if ($("#startDate").val().trim() == "")
 	{
-		return "Enter Start Date."; 
+		return "Enter a Date.";
 	}
 	
 	return true; 
